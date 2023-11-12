@@ -22,32 +22,36 @@ MAX_PLAYER_Y = 530
 MIN_PLAYER_Y = 200
 #Define Classes
 class game_object:
-    def __init__(self,rect,alive,life_span=None,last_x_dir=None,vel=None):
+    def __init__(self,rect,alive,life_span=None,last_x_dir=None,vel=None,max_x=None,min_x=None,max_y=None,min_y=None):
         self.rect = rect
         self.alive = alive
         self.vel = vel
         self.last_x_dir = last_x_dir
         self.life_Span = life_span
-    def up(self,vel,border_y_top):
-        if self.rect.y > border_y_top:
+        self.max_x=max_x
+        self.min_x=min_x
+        self.max_y=max_y
+        self.min_y=min_y
+    def up(self,vel):
+        if self.rect.y > self.min_y:
             self.rect.y -= vel
         else:
-            self.rect.y = border_y_top
-    def down(self,vel,border_y_bottom):
-        if self.rect.y < border_y_bottom:
+            self.rect.y = self.min_y
+    def down(self,vel):
+        if self.rect.y < self.max_y:
             self.rect.y += vel
         else:
-            self.rect.y = border_y_bottom
-    def right(self,vel,border_x_right):
-        if self.rect.x < border_x_right:
+            self.rect.y = self.min_y
+    def right(self,vel):
+        if self.rect.x < self.max_x:
             self.rect.x += vel
         else:
-            self.rect.x = border_x_right
-    def left(self,vel,border_x_left):
-        if self.rect.x > border_x_left:
+            self.rect.x = self.max_x
+    def left(self,vel):
+        if self.rect.x > self.min_x:
             self.rect.x -= vel
         else:
-            self.rect.x = border_x_left
+            self.rect.x = self.min_x
 
 class Game:
     def __init__(self):
@@ -72,26 +76,26 @@ class Game:
                 player.vel += 1
             else:
                 player.vel = 10
-            player.right(player.vel,MAX_PLAYER_X)
+            player.right(player.vel)
         if keys_pressed[pygame.K_a] or keys_pressed[pygame.K_LEFT]:
             if player.vel < 9:
                 player.last_x_dir = "LEFT"
                 player.vel += 1
             else:
                 player.vel = 10
-            player.left(self.player_vel,MIN_PLAYER_X)
+            player.left(self.player_vel)
         if keys_pressed[pygame.K_s] or keys_pressed[pygame.K_DOWN]:
-            player.down(5,MAX_PLAYER_Y)
+            player.down(5)
         if keys_pressed[pygame.K_w] or keys_pressed[pygame.K_UP]:
-            player.up(5,MIN_PLAYER_Y)
+            player.up(5)
         if player.vel > 0:
             player.vel -= 0.2
         if player.vel < 0:
             player.vel = 0
         if player.last_x_dir == "LEFT":
-            player.left(player.vel,MIN_PLAYER_X)
+            player.left(player.vel)
         elif player.last_x_dir == "RIGHT":
-            player.right(player.vel,MAX_PLAYER_X)
+            player.right(player.vel)
     def handle_bullets(self,player_bullets,enemy_jets,explosions):
         for player_bullet in player_bullets:
             if player_bullet.vel > 0:
@@ -100,9 +104,9 @@ class Game:
                 player_bullet.vel = 0
             player_bullet.rect.y -= 5
             if player_bullet.last_x_dir == "RIGHT":
-                player_bullet.right(player_bullet.vel,770)
+                player_bullet.right(player_bullet.vel)
             else:
-                player_bullet.left(player_bullet.vel,-10)
+                player_bullet.left(player_bullet.vel)
             if player_bullet.rect.y < 10:
                 player_bullets.remove(player_bullet)
             else:
@@ -125,7 +129,7 @@ class Game:
 
 
     def main(self):
-        self.player_jet = game_object(pygame.Rect(370,500,100,100),True,None,None,0)
+        self.player_jet = game_object(pygame.Rect(370,500,100,100),True,None,None,0,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MIN_PLAYER_Y)
         self.enemy_jet = game_object(pygame.Rect(370,100,100,100),True,None,None,1)
         self.enemy_x_dir = "RIGHT"
         self.enemy_jets = []
@@ -152,7 +156,7 @@ class Game:
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE and len(self.player_bullets) < MAX_PLAYER_BULLETS:
-                        self.player_bullet = game_object(pygame.Rect(self.player_jet.rect.x + 20,self.player_jet.rect.y - 20,50,50),True,None,self.player_jet.last_x_dir,self.player_jet.vel)
+                        self.player_bullet = game_object(pygame.Rect(self.player_jet.rect.x + 20,self.player_jet.rect.y - 20,50,50),True,None,self.player_jet.last_x_dir,self.player_jet.vel,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MIN_PLAYER_Y)
                         self.player_bullets.append(self.player_bullet)
                         BULLET_FIRE_SOUND.play()
             #Spawn Enemys
