@@ -41,7 +41,7 @@ class game_object:
         if self.rect.y < self.max_y:
             self.rect.y += vel
         else:
-            self.rect.y = self.min_y
+            self.rect.y = self.max_y
     def right(self,vel):
         if self.rect.x < self.max_x:
             self.rect.x += vel
@@ -66,7 +66,7 @@ class Game:
         for bullet in player_bullets:
             self.WIN.blit(PLAYER_BULLET_IMG,(bullet.rect.x,bullet.rect.y))
         for enemy in enemy_jets:
-            self.WIN.blit(ENEMY_JET_IMG,(enemy.x,enemy.y))
+            self.WIN.blit(ENEMY_JET_IMG,(enemy.rect.x,enemy.rect.y))
         for explosion in explosions:
             self.WIN.blit(EXPLOSION,(explosion.rect.x,explosion.rect.y))
     def handle_movement(self,keys_pressed,player):
@@ -111,22 +111,28 @@ class Game:
                 player_bullets.remove(player_bullet)
             else:
                 for enemy_jet in enemy_jets:
-                    if enemy_jet.colliderect(player_bullet.rect):
-                        explosion = game_object(pygame.Rect(enemy_jet.x,enemy_jet.y,70,70),True,70)
+                    if enemy_jet.rect.colliderect(player_bullet.rect):
+                        explosion = game_object(pygame.Rect(enemy_jet.rect.x,enemy_jet.rect.y,70,70),True,70)
                         explosions.append(explosion)
                         if enemy_jet in enemy_jets and player_bullet in player_bullets:
                             enemy_jets.remove(enemy_jet)
                             player_bullets.remove(player_bullet)
                         EXPLOSION_SOUND.play()
-    def handle_enemys(self,enemy_jets,enemy_x_dir,player):
+    def handle_enemys(self,enemy_jets):
         for enemy in enemy_jets:
-            if enemy.x > player.rect.x:
-                enemy.x -= random.uniform(1,5)
-            if enemy.x < player.rect.x:
-                enemy.x += random.uniform(1,5)
-            if enemy.y < MAX_PLAYER_Y:
-                enemy.y += random.uniform(0,1)
-
+            if enemy.last_x_dir == "RIGHT" and enemy.rect.x <= enemy.max_x:
+                enemy.rect.x += 5
+            if enemy.last_x_dir == "LEFT" and enemy.rect.x >= enemy.min_x:
+                enemy.rect.x -= 5
+            if enemy.rect.x >= enemy.max_x:
+                enemy.last_x_dir = "LEFT"
+                enemy.rect.y += 5
+            if enemy.rect.x <= enemy.min_x:
+                enemy.last_x_dir = "RIGHT"
+                enemy.rect.y += 5
+    def handle_explosions(explosions,player):
+        for explosion in explosions:
+            if explosion.rect.colliderect()
 
     def main(self):
         self.player_jet = game_object(pygame.Rect(370,500,100,100),True,None,None,0,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MIN_PLAYER_Y)
@@ -162,13 +168,14 @@ class Game:
             #Spawn Enemys
             if self.timer < 1 and len(self.enemy_jets) < 5:
                 self.timer = 0
-                self.enemy_jet.rect = pygame.Rect(random.randint(-30,730),random.randint(20,100),100,100)
-                self.enemy_jets.append(self.enemy_jet.rect)
+                self.enemy_jet = game_object(pygame.Rect(random.randint(-30,730),random.randint(20,100),100,100),True,None,"RIGHT",1,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MAX_PLAYER_X)
+                self.enemy_jets.append(self.enemy_jet)
                 self.timer = random.randint(self.min_spawn_speed,self.max_spawn_speed)
             self.keys_pressed = pygame.key.get_pressed()
             self.handle_movement(self.keys_pressed,self.player_jet)
             self.handle_bullets(self.player_bullets,self.enemy_jets,self.explosions)
-            self.handle_enemys(self.enemy_jets,self.enemy_x_dir,self.player_jet)
+            self.handle_enemys(self.enemy_jets)
+            self.handle_explosions()
             self.draw_window(self.player_jet,self.enemy_jets,self.player_bullets,self.explosions)
             self.timer -= 1
             pygame.display.update()
