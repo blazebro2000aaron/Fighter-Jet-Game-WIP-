@@ -27,7 +27,7 @@ class game_object:
         self.alive = alive
         self.vel = vel
         self.last_x_dir = last_x_dir
-        self.life_Span = life_span
+        self.life_span = life_span
         self.max_x=max_x
         self.min_x=min_x
         self.max_y=max_y
@@ -112,7 +112,7 @@ class Game:
             else:
                 for enemy_jet in enemy_jets:
                     if enemy_jet.rect.colliderect(player_bullet.rect):
-                        explosion = game_object(pygame.Rect(enemy_jet.rect.x,enemy_jet.rect.y,70,70),True,70)
+                        explosion = game_object(pygame.Rect(enemy_jet.rect.x,enemy_jet.rect.y,200,200),True,100)
                         explosions.append(explosion)
                         if enemy_jet in enemy_jets and player_bullet in player_bullets:
                             enemy_jets.remove(enemy_jet)
@@ -130,10 +130,14 @@ class Game:
             if enemy.rect.x <= enemy.min_x:
                 enemy.last_x_dir = "RIGHT"
                 enemy.rect.y += 5
-    def handle_explosions(explosions,player):
+    def handle_explosions(self,explosions,player):
         for explosion in explosions:
-            if explosion.rect.colliderect()
-
+            explosion.life_span -= 1
+            if explosion.rect.colliderect(player.rect):
+                explosions.remove(explosion)
+                player.alive = False
+            if explosion.life_span == 0 and explosion in explosions:
+                explosions.remove(explosion)
     def main(self):
         self.player_jet = game_object(pygame.Rect(370,500,100,100),True,None,None,0,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MIN_PLAYER_Y)
         self.enemy_jet = game_object(pygame.Rect(370,100,100,100),True,None,None,1)
@@ -175,8 +179,9 @@ class Game:
             self.handle_movement(self.keys_pressed,self.player_jet)
             self.handle_bullets(self.player_bullets,self.enemy_jets,self.explosions)
             self.handle_enemys(self.enemy_jets)
-            self.handle_explosions()
+            self.handle_explosions(self.explosions,self.player_jet)
             self.draw_window(self.player_jet,self.enemy_jets,self.player_bullets,self.explosions)
             self.timer -= 1
             pygame.display.update()
+
 Game().main()
