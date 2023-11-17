@@ -20,14 +20,16 @@ MAX_PLAYER_X =  730
 MIN_PLAYER_X =  -30
 MAX_PLAYER_Y = 530
 MIN_PLAYER_Y = 200
+#Font
+FONT = pygame.font.Font("Fighter Jet Game/Scorchedearth.otf")
 #Define Classes
 class game_object:
-    def __init__(self,rect,alive,life_span=None,last_x_dir=None,vel=None,max_x=None,min_x=None,max_y=None,min_y=None):
+    def __init__(self,rect,alive,tick=0,last_x_dir=None,vel=None,max_x=None,min_x=None,max_y=None,min_y=None):
         self.rect = rect
         self.alive = alive
         self.vel = vel
         self.last_x_dir = last_x_dir
-        self.life_span = life_span
+        self.tick = tick
         self.max_x=max_x
         self.min_x=min_x
         self.max_y=max_y
@@ -69,6 +71,9 @@ class Game:
             self.WIN.blit(ENEMY_JET_IMG,(enemy.rect.x,enemy.rect.y))
         for explosion in explosions:
             self.WIN.blit(EXPLOSION,(explosion.rect.x,explosion.rect.y))
+    def draw_text(self,num_of_bullet):
+        bullet_text = NotImplemented
+        self.WIN.blit
     def handle_movement(self,keys_pressed,player):
         if keys_pressed[pygame.K_d] or keys_pressed[pygame.K_RIGHT]:
             if player.vel < 9:
@@ -96,7 +101,7 @@ class Game:
             player.left(player.vel)
         elif player.last_x_dir == "RIGHT":
             player.right(player.vel)
-    def handle_bullets(self,player_bullets,enemy_jets,explosions):
+    def handle_bullets(self,player_bullets,enemy_bullets,enemy_jets,player,explosions):
         for player_bullet in player_bullets:
             if player_bullet.vel > 0:
                 player_bullet.vel -= 0.1
@@ -112,13 +117,35 @@ class Game:
             else:
                 for enemy_jet in enemy_jets:
                     if enemy_jet.rect.colliderect(player_bullet.rect):
-                        explosion = game_object(pygame.Rect(enemy_jet.rect.x,enemy_jet.rect.y,200,200),True,100)
+                        explosion = game_object(pygame.Rect(enemy_jet.rect.x,enemy_jet.rect.y,150,160),True,0)
                         explosions.append(explosion)
                         if enemy_jet in enemy_jets and player_bullet in player_bullets:
                             enemy_jets.remove(enemy_jet)
                             player_bullets.remove(player_bullet)
                         EXPLOSION_SOUND.play()
-    def handle_enemys(self,enemy_jets):
+            for enemy_jet in enemy_jets:
+                for enemy_bullet in enemy_bullets:
+                    if enemy_bullet.vel > 0:
+                        enemy_bullet.vel -= 0.1
+                    else:
+                        enemy_bullet.vel = 0
+                    enemy_bullet.rect.y += 5
+                    if enemy_bullet.last_x_dir == "RIGHT":
+                        enemy_bullet.right(enemy_bullet.vel)
+                    else:
+                        enemy_bullet.left(enemy_bullet.vel)
+                    if enemy_bullet.rect.y > 700:
+                        enemy_bullets.remove(enemy_bullet)
+                    elif enemy_bullet.rect.colliderect(enemy_bullet.rect):
+                        explosion = game_object(pygame.Rect(enemy_jet.rect.x,enemy_jet.rect.y,150,160),True,0)
+                        explosions.append(explosion)
+                        if enemy_bullet in enemy_bullets and player_bullet in player_bullets:
+                            enemy_jets.remove(enemy_jet)
+                            player_bullets.remove(player_bullet)
+                        EXPLOSION_SOUND.play()
+                    if enemy_bullet.rect.colliderect(player.rect):
+                        player.alive = False
+    def handle_enemys(self,enemy_jets,bullets):
         for enemy in enemy_jets:
             if enemy.last_x_dir == "RIGHT" and enemy.rect.x <= enemy.max_x:
                 enemy.rect.x += 5
@@ -130,17 +157,20 @@ class Game:
             if enemy.rect.x <= enemy.min_x:
                 enemy.last_x_dir = "RIGHT"
                 enemy.rect.y += 5
+            if (enemy.tick / 100).is_integer():
+                bullets.append(game_object(pygame.Rect(enemy.rect.x + 20,enemy.rect.y - 20,50,50),True,0,enemy.last_x_dir,random.randint(0,5),MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MIN_PLAYER_Y))
     def handle_explosions(self,explosions,player):
         for explosion in explosions:
-            explosion.life_span -= 1
+            explosion.tick += 1
             if explosion.rect.colliderect(player.rect):
                 explosions.remove(explosion)
                 player.alive = False
-            if explosion.life_span == 0 and explosion in explosions:
+            if explosion.tick == 100 and explosion in explosions:
                 explosions.remove(explosion)
+
     def main(self):
-        self.player_jet = game_object(pygame.Rect(370,500,100,100),True,None,None,0,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MIN_PLAYER_Y)
-        self.enemy_jet = game_object(pygame.Rect(370,100,100,100),True,None,None,1)
+        self.player_jet = game_object(pygame.Rect(370,500,100,100),True,0,None,0,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MIN_PLAYER_Y)
+        self.enemy_jet = game_object(pygame.Rect(370,100,100,100),True,0,None,1)
         self.enemy_x_dir = "RIGHT"
         self.enemy_jets = []
         self.player_bullets = []
@@ -166,19 +196,19 @@ class Game:
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE and len(self.player_bullets) < MAX_PLAYER_BULLETS:
-                        self.player_bullet = game_object(pygame.Rect(self.player_jet.rect.x + 20,self.player_jet.rect.y - 20,50,50),True,None,self.player_jet.last_x_dir,self.player_jet.vel,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MIN_PLAYER_Y)
+                        self.player_bullet = game_object(pygame.Rect(self.player_jet.rect.x + 20,self.player_jet.rect.y - 20,50,50),True,0,self.player_jet.last_x_dir,self.player_jet.vel,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MIN_PLAYER_Y)
                         self.player_bullets.append(self.player_bullet)
                         BULLET_FIRE_SOUND.play()
             #Spawn Enemys
             if self.timer < 1 and len(self.enemy_jets) < 5:
                 self.timer = 0
-                self.enemy_jet = game_object(pygame.Rect(random.randint(-30,730),random.randint(20,100),100,100),True,None,"RIGHT",1,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MAX_PLAYER_X)
+                self.enemy_jet = game_object(pygame.Rect(random.randint(-30,730),random.randint(20,100),100,100),True,0,"RIGHT",1,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MAX_PLAYER_X)
                 self.enemy_jets.append(self.enemy_jet)
                 self.timer = random.randint(self.min_spawn_speed,self.max_spawn_speed)
             self.keys_pressed = pygame.key.get_pressed()
             self.handle_movement(self.keys_pressed,self.player_jet)
-            self.handle_bullets(self.player_bullets,self.enemy_jets,self.explosions)
-            self.handle_enemys(self.enemy_jets)
+            self.handle_bullets(self.player_bullets,self.enemy_bullets,self.enemy_jets,self.player_jet,self.explosions)
+            self.handle_enemys(self.enemy_jets,self.enemy_bullets)
             self.handle_explosions(self.explosions,self.player_jet)
             self.draw_window(self.player_jet,self.enemy_jets,self.player_bullets,self.explosions)
             self.timer -= 1
