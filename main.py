@@ -72,8 +72,7 @@ class Game:
         for explosion in explosions:
             self.WIN.blit(EXPLOSION,(explosion.rect.x,explosion.rect.y))
     def draw_text(self,num_of_bullet):
-        bullet_text = NotImplemented
-        self.WIN.blit
+        pass
     def handle_movement(self,keys_pressed,player):
         if keys_pressed[pygame.K_d] or keys_pressed[pygame.K_RIGHT]:
             if player.vel < 9:
