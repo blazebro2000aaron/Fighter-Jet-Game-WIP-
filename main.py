@@ -1,4 +1,3 @@
-
 import pygame,random,sys
 
 pygame.init()
@@ -86,17 +85,18 @@ class Game:
             self.WIN.blit(ENEMY_BULLET_IMG,(bullet.rect.x,bullet.rect.y))
         for cloud in clouds:
             self.WIN.blit(CLOUD_IMG,(cloud.x,cloud.y))
-    def draw_text(self,num_of_bullet,lives,score):
+    def draw_text(self,lives,score):
         if self.player_jet.alive:
             SCORE_TEXT = FONT.render("Score "+str(score),1,(0,0,0)) 
-            BULLETS_TEXT = pygame.transform.scale(FONT.render("Bullets "+str(num_of_bullet),1,(0,0,0)),(180,40))
             LIVES_TEXT = pygame.transform.scale(FONT.render("Lives "+str(lives),1,(0,0,0)),(150,40))
             self.WIN.blit(SCORE_TEXT,(0,0))
-            self.WIN.blit(BULLETS_TEXT,(0,560))
             self.WIN.blit(LIVES_TEXT,(620,560))
         else:
             TITLE_TEXT = FONT.render("Explosive Flights",1,(0,0,0))
             self.WIN.blit(TITLE_TEXT,(100,100))
+        if lives == 0:
+            DEATHMESSAGE = FONT.render("You Died",1,(0,0,0),(255,0,0))
+            self.WIN.blit(DEATHMESSAGE,(300,200))
     def draw_buttons(self,quit_button,play_button):
         if self.quit_button_hover:
             QUIT_BUTTON_IMG = pygame.transform.scale(FONT.render("Quit", 1,(0,0,0),(200,0,0)),(180,70))
@@ -110,7 +110,28 @@ class Game:
         else:
             START_RESUME_BUTTON_IMG = pygame.transform.scale(FONT.render("Play", 1,(0,0,0),(0,255,0)),(200,60))
             self.WIN.blit(START_RESUME_BUTTON_IMG,(play_button.rect.x,play_button.rect.y))
+    def draw_bullet_cool_down(self,bullet_cool_down):
+        if bullet_cool_down < 0:
+            bullet_cool_down = 0
+        cool_down_fill_rect = pygame.Rect(20,530,100,50)
+        cool_down_timer_surface = pygame.Surface((bullet_cool_down*2,50))
+        cool_down_timer_surface.set_alpha(90)
+        cool_down_timer_surface.fill((255,255,255))
+        if bullet_cool_down <= 0:
+            pygame.draw.rect(self.WIN,(0,255,0),cool_down_fill_rect)
+        else:
+            pygame.draw.rect(self.WIN,(255,0,0),cool_down_fill_rect)
+        self.WIN.blit(cool_down_timer_surface,(20,530))
+        pygame.draw.rect(self.WIN,(0,0,0),cool_down_fill_rect,5)
     def handle_movement(self,keys_pressed,player):
+        if player.last_x_dir == "LEFT":
+            player.left(player.x_vel)
+        elif player.last_x_dir == "RIGHT":
+            player.right(player.x_vel)
+        if player.last_y_dir == "UP":
+            player.up(player.y_vel)
+        elif player.last_y_dir == "DOWN":
+            player.down(player.y_vel)
         if keys_pressed[pygame.K_d] or keys_pressed[pygame.K_RIGHT]:
             if player.x_vel < 9:
                 player.last_x_dir = "RIGHT"
@@ -146,14 +167,7 @@ class Game:
         if player.y_vel < 0:
             player.y_vel = 0
         
-        if player.last_x_dir == "LEFT":
-            player.left(player.x_vel)
-        elif player.last_x_dir == "RIGHT":
-            player.right(player.x_vel)
-        if player.last_y_dir == "UP":
-            player.up(player.y_vel)
-        elif player.last_y_dir == "DOWN":
-            player.down(player.y_vel)
+
 
     def handle_bullets(self,player_bullets,enemy_bullets,enemy_jets,player,explosions):
         for player_bullet in player_bullets:
@@ -216,13 +230,12 @@ class Game:
                 if enemy_bullet.rect.y > 700:
                     enemy_bullets.remove(enemy_bullet)
                 elif enemy_bullet.rect.colliderect(player.rect):
-                    explosion = game_object(pygame.Rect(enemy_jet.rect.x,enemy_jet.rect.y,150,160),True,0)
+                    explosion = game_object(pygame.Rect(player.rect.x,player.rect.y,150,160),True,0)
                     explosions.append(explosion)
                     if enemy_bullet in enemy_bullets:
                         enemy_bullets.remove(enemy_bullet)
                     EXPLOSION_SOUND.play()
-                    # if enemy bullet hits the player, it dies
-                    self.player_lives -= 1
+
 
 
     def handle_enemys(self,enemy_jets,bullets):
@@ -292,6 +305,7 @@ class Game:
         self.quit_button = game_object(pygame.Rect(325,400,175,35),False)
         self.mousedown = False
         self.player_lives = 0
+        self.bullet_cool_down = 0
         pygame.mixer.music.load(BACKGROUND_MUSIC)
         pygame.mixer.music.play()
         #Main Game loop
@@ -306,16 +320,13 @@ class Game:
                     sys.exit()
                 if self.player_jet.alive:
                     if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_SPACE and len(self.player_bullets) < MAX_PLAYER_BULLETS:
-                            self.player_bullet = game_object(pygame.Rect(self.player_jet.rect.x + 20,self.player_jet.rect.y - 20,50,50),True,0,self.player_jet.last_x_dir,self.player_jet.last_y_dir,self.player_jet.x_vel,34,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MIN_PLAYER_Y)
-                            self.player_bullets.append(self.player_bullet)
-                            print("Bullets ",len(self.player_bullets))
-                            BULLET_FIRE_SOUND.play()
+                        if event.key == pygame.K_SPACE:
+                            self.player_jet.x_vel,self.player_jet.y_vel = 0,0
+
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    self.mousedown = True
                 else:
-                    if event.type == pygame.MOUSEBUTTONDOWN:
-                        self.mousedown = True
-                    else:
-                        self.mousedown = False
+                    self.mousedown = False
             #Spawn Enemys
             if self.player_jet.alive:
                 if self.enemy_spawn_timer >= 20 and len(self.enemy_jets) < 5:
@@ -323,6 +334,12 @@ class Game:
                     self.enemy_jet = game_object(pygame.Rect(random.randint(-30,730),random.randint(20,100),100,100),True,0,"RIGHT",None,5,5,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MAX_PLAYER_X)
                     self.enemy_jets.append(self.enemy_jet)
                     self.enemy_spawn_timer = random.randint(self.min_spawn_speed,self.max_spawn_speed)
+
+                if self.mousedown and len(self.player_bullets) < MAX_PLAYER_BULLETS and self.bullet_cool_down <= 0:
+                    self.player_bullet = game_object(pygame.Rect(self.player_jet.rect.x + 20,self.player_jet.rect.y - 20,50,50),True,0,self.player_jet.last_x_dir,self.player_jet.last_y_dir,self.player_jet.x_vel,34,MAX_PLAYER_X,MIN_PLAYER_X,MAX_PLAYER_Y,MIN_PLAYER_Y)
+                    self.player_bullets.append(self.player_bullet)
+                    BULLET_FIRE_SOUND.play()
+                    self.bullet_cool_down = 50
                 if self.cloud_spawn_timer >= 100:
                     self.cloud_spawn_timer = 0
                     self.cloud_rect = pygame.Rect(random.randint(0,600),-30,100,50)
@@ -347,13 +364,16 @@ class Game:
                 self.handle_buttons(self.cursor,self.quit_button,self.play_button)
                 self.draw_buttons(self.quit_button,self.play_button)
             if self.player_lives == 0:
-                self.draw_text(MAX_PLAYER_BULLETS-len(self.player_bullets),self.player_lives,self.score)
+                self.draw_text(self.player_lives,self.score)
                 pygame.display.update()
                 pygame.time.delay(1000)
                 self.player_jet.alive = False
-            self.draw_text(MAX_PLAYER_BULLETS-len(self.player_bullets),self.player_lives,self.score)
+            self.draw_text(self.player_lives,self.score)
             self.cloud_spawn_timer += 1
             self.enemy_spawn_timer += 1
+            self.bullet_cool_down -= 1
+            if self.player_jet.alive:
+                self.draw_bullet_cool_down(self.bullet_cool_down)
             pygame.display.update()
 
 Game().main()
